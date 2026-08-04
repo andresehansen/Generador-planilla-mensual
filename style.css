@@ -1,0 +1,359 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 30px 15px;
+}
+
+.container {
+    width: 100%;
+    max-width: 860px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.header h1 {
+    font-size: 1.8rem;
+    color: #1a365d;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: #4a5568;
+    font-size: 0.95rem;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+    flex: 1;
+}
+
+.margin-top-20 {
+    margin-top: 20px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #2d3748;
+    margin-bottom: 6px;
+}
+
+/* ----------------------------------------------------
+   GESTIÓN DE PERSONAL (ABM)
+   ---------------------------------------------------- */
+.staff-management-box {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.staff-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.staff-chip {
+    background: #edf2f7;
+    border: 1px solid #cbd5e0;
+    color: #2d3748;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.staff-chip .remove-btn {
+    color: #e53e3e;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.staff-chip .remove-btn:hover {
+    color: #9b2c2c;
+}
+
+.btn-secondary {
+    width: 100%;
+    background-color: #4a5568;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #2d3748;
+}
+
+.picker-panel {
+    display: flex;
+    gap: 15px;
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.instruction-text {
+    font-size: 0.85rem;
+    color: #4a5568;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background-color: #fff;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+
+/* ----------------------------------------------------
+   GRID DE CALENDARIO INTERACTIVO
+   ---------------------------------------------------- */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    background: #edf2f7;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e0;
+}
+
+.cal-header {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #2b6cb0;
+    background: #e2e8f0;
+    padding: 6px 0;
+    border-radius: 4px;
+}
+
+.cal-cell {
+    background: #ffffff;
+    min-height: 80px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    padding: 5px;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.cal-cell.feriado-cell {
+    background: #fff5f5;
+    border-color: #feb2b2;
+}
+
+.cal-cell:hover:not(.weekend):not(.empty) {
+    border-color: #3182ce;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.2);
+    transform: translateY(-2px);
+}
+
+.cal-cell.weekend {
+    background: #f7fafc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.cal-cell.empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+}
+
+.cal-day-num {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #4a5568;
+}
+
+.cal-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #ffffff;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.tag-feriado {
+    background-color: #d32f2f;
+}
+
+.tag-conae {
+    background-color: #7030a0;
+}
+
+.tag-licencia {
+    background-color: #2e7d32;
+}
+
+.tag-franco {
+    background-color: #c62828;
+}
+
+.tag-manana {
+    background-color: #e65100;
+}
+
+.tag-tarde {
+    background-color: #1565c0;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px 12px;
+    background: #f7fafc;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.checkbox-label {
+    font-weight: normal;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.section-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #2b6cb0;
+    margin: 22px 0 14px 0;
+    border-bottom: 2px solid #ebf8ff;
+    padding-bottom: 6px;
+}
+
+.rules-summary {
+    background-color: #f7fafc;
+    border-left: 4px solid #3182ce;
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+.rules-summary h4 {
+    font-size: 0.9rem;
+    color: #2c5282;
+    margin-bottom: 8px;
+}
+
+.rules-summary ul {
+    list-style-type: none;
+    font-size: 0.85rem;
+    color: #4a5568;
+}
+
+.rules-summary li {
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.btn-primary {
+    width: 100%;
+    background-color: #2b6cb0;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+    background-color: #2c5282;
+}
+
+.btn-primary:active {
+    transform: scale(0.99);
+}
+
+.status-box {
+    margin-top: 18px;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    background-color: #edf2f7;
+    color: #4a5568;
+}
+
+.status-box.success {
+    background-color: #c6f6d5;
+    color: #22543d;
+}
+
+.status-box.error {
+    background-color: #fed7d7;
+    color: #742a2a;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 0.8rem;
+    color: #718096;
+}

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Planillas de Distribución de Guardia</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2023.11.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2023.11.1/core.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <h1>🗓️ Generador de Planillas de Distribución</h1>
+            <p>Sistema de asignación de turnos, francos y Home Office para la oficina de Herrera</p>
+        </header>
+
+        <main class="card">
+            <!-- Selección de Mes y Año -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="mes">Mes de Planificación:</label>
+                    <select id="mes" onchange="renderCalendar()">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8" selected>Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="anio">Año:</label>
+                    <input type="number" id="anio" value="2026" min="2024" max="2030" onchange="renderCalendar()">
+                </div>
+            </div>
+
+            <!-- Sección de Gestión de Personal (ABM) -->
+            <div class="section-title">👥 Gestión de Personal (Agregar y Eliminar Integrantes)</div>
+
+            <div class="staff-management-box">
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="text" id="new_staff_name" placeholder="Nombre (Ej: Pérez)">
+                    </div>
+                    <div class="form-group">
+                        <select id="new_staff_group">
+                            <option value="GIS">Grupo GIS</option>
+                            <option value="DUOS">Dúos / Tríos</option>
+                            <option value="RESTO" selected>Resto de Personal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select id="new_staff_ho">
+                            <option value="NINGUNO" selected>Sin HO Fijo</option>
+                            <option value="AHO">Grupo AHO</option>
+                            <option value="BHO">Grupo BHO</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 0 0 140px;">
+                        <button type="button" onclick="addStaffMember()" class="btn-secondary">+ Agregar</button>
+                    </div>
+                </div>
+
+                <div class="staff-tags-container" id="staff_tags_list"></div>
+            </div>
+
+            <div class="section-title">📅 Carga Visual de Novedades y Feriados en Calendario</div>
+
+            <!-- Panel de Selección de Novedad -->
+            <div class="picker-panel">
+                <div class="form-group">
+                    <label for="emp_select">1. Seleccionar Empleado:</label>
+                    <select id="emp_select"></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="type_select">2. Tipo de Novedad o Feriado:</label>
+                    <select id="type_select" onchange="handleTypeChange()">
+                        <option value="CONAE">🏛️ CONAE</option>
+                        <option value="LICENCIA">🌴 Licencia</option>
+                        <option value="MANANA">☀️ Turno Mañana Fijo</option>
+                        <option value="TARDE">🌙 Turno Tarde Fijo</option>
+                        <option value="FRANCO">🔴 Franco Solicitado</option>
+                        <option value="FERIADO">🎉 Feriado / Asueto</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Campo dinámico para escribir el detalle de la licencia -->
+            <div class="form-group" id="lic_detail_group" style="display: none;">
+                <label for="lic_detail_input">📝 Motivo/Detalle de Licencia (se escribirá manualmente en el Excel):</label>
+                <input type="text" id="lic_detail_input" value="Licencia no computable" placeholder="Ej: Licencia no computable, Examen, Médica">
+            </div>
+
+            <p class="instruction-text">👇 Haz clic sobre los días del calendario para asignar o quitar la novedad/feriado seleccionado:</p>
+
+            <!-- Grid de Calendario Interactivo -->
+            <div id="calendar_grid" class="calendar-grid"></div>
+
+            <!-- Personal que hace Alfa este mes (Todos los integrantes) -->
+            <div class="form-group margin-top-20">
+                <label>🚘 Personal que hace ALFA este mes (Excluidos de monitores 07:00):</label>
+                <div class="checkbox-grid" id="alfa_checkboxes_grid"></div>
+            </div>
+
+            <!-- Campos ocultos para pasar datos JSON a Python -->
+            <input type="hidden" id="novedades_json" value="[]">
+            <input type="hidden" id="personal_json" value="[]">
+
+            <button id="btn-generar" class="btn-primary">⚡ Validar Reglas y Generar Planilla Excel (.xlsx)</button>
+            <div id="estado" class="status-box">Listo para procesar...</div>
+        </main>
+
+        <footer class="footer">
+            Desplegado estáticamente en GitHub Pages con PyScript & OpenPyXL.
+        </footer>
+    </div>
+
+    <!-- Script de Gestión de Personal y Calendario Interactivo -->
+    <script>
+        // Lista Maestra de Personal Configurable
+        let personalList = [
+            { name: "Aranda", group: "DUOS", ho: "AHO" },
+            { name: "Alegre", group: "DUOS", ho: "AHO" },
+            { name: "Nahuel", group: "GIS", ho: "AHO" },
+            { name: "Fuentes", group: "GIS", ho: "AHO" },
+            { name: "Romero", group: "GIS", ho: "AHO" },
+            { name: "Ledesma", group: "GIS", ho: "BHO" },
+            { name: "Lezcano", group: "RESTO", ho: "BHO" },
+            { name: "Itzi", group: "GIS", ho: "BHO" },
+            { name: "Navarro", group: "DUOS", ho: "BHO" },
+            { name: "Gonzalote", group: "RESTO", ho: "BHO" },
+            { name: "Coronel", group: "GIS", ho: "NINGUNO" },
+            { name: "Herrera", group: "GIS", ho: "NINGUNO" },
+            { name: "Neri", group: "DUOS", ho: "NINGUNO" },
+            { name: "Tamara", group: "DUOS", ho: "NINGUNO" }
+        ];
+
+        // Lista de Alfa seleccionados por defecto (Gonzalote y Tamara)
+        let alfaSelected = ["Gonzalote", "Tamara"];
+
+        // Arreglo global de novedades
+        let novedades = [
+            { emp: "TODOS", date: 17, type: "FERIADO" },
+            { emp: "Coronel", date: 10, type: "CONAE" },
+            { emp: "Coronel", date: 24, type: "CONAE" },
+            { emp: "Aranda", date: 24, type: "LICENCIA", detail: "Licencia no computable" },
+            { emp: "Aranda", date: 25, type: "LICENCIA", detail: "Licencia no computable" },
+            { emp: "Aranda", date: 26, type: "LICENCIA", detail: "Licencia no computable" },
+            { emp: "Aranda", date: 27, type: "LICENCIA", detail: "Licencia no computable" },
+            { emp: "Aranda", date: 28, type: "LICENCIA", detail: "Licencia no computable" },
+            { emp: "Nahuel", date: 5, type: "FRANCO" },
+            { emp: "Nahuel", date: 12, type: "FRANCO" }
+        ];
+
+        function renderStaffUI() {
+            // 1. Renderizar Tags de Personal
+            const container = document.getElementById("staff_tags_list");
+            container.innerHTML = "";
+            personalList.forEach(p => {
+                const tag = document.createElement("span");
+                tag.className = "staff-chip";
+                tag.innerHTML = `<strong>${p.name}</strong> <small>(${p.group})</small> <span class="remove-btn" onclick="removeStaffMember('${p.name}')">&times;</span>`;
+                container.appendChild(tag);
+            });
+
+            // 2. Renderizar Select de Empleados
+            const select = document.getElementById("emp_select");
+            const currentVal = select.value;
+            select.innerHTML = "";
+            personalList.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.name;
+                opt.innerText = p.name;
+                select.appendChild(opt);
+            });
+            if (currentVal && personalList.some(p => p.name === currentVal)) {
+                select.value = currentVal;
+            }
+
+            // 3. Renderizar Checkboxes de ALFA para TODOS los empleados
+            const alfaGrid = document.getElementById("alfa_checkboxes_grid");
+            alfaGrid.innerHTML = "";
+            personalList.forEach(p => {
+                const isChecked = alfaSelected.includes(p.name);
+                const lbl = document.createElement("label");
+                lbl.className = "checkbox-label";
+                lbl.innerHTML = `<input type="checkbox" class="alfa-chk" value="${p.name}" ${isChecked ? 'checked' : ''} onchange="toggleAlfa('${p.name}')"> ${p.name}`;
+                alfaGrid.appendChild(lbl);
+            });
+
+            syncJson();
+        }
+
+        function toggleAlfa(empName) {
+            if (alfaSelected.includes(empName)) {
+                alfaSelected = alfaSelected.filter(e => e !== empName);
+            } else {
+                alfaSelected.push(empName);
+            }
+            syncJson();
+        }
+
+        function addStaffMember() {
+            const input = document.getElementById("new_staff_name");
+            const name = input.value.trim();
+            const group = document.getElementById("new_staff_group").value;
+            const ho = document.getElementById("new_staff_ho").value;
+
+            if (!name) return;
+            if (personalList.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+                alert("Ese integrante ya existe en la lista.");
+                return;
+            }
+
+            personalList.push({ name, group, ho });
+            input.value = "";
+            renderStaffUI();
+            renderCalendar();
+        }
+
+        function removeStaffMember(name) {
+            if (confirm(`¿Estás seguro de eliminar a ${name} de la lista de personal?`)) {
+                personalList = personalList.filter(p => p.name !== name);
+                alfaSelected = alfaSelected.filter(e => e !== name);
+                novedades = novedades.filter(n => n.emp !== name);
+                renderStaffUI();
+                renderCalendar();
+            }
+        }
+
+        function handleTypeChange() {
+            const typeSelect = document.getElementById("type_select");
+            const empSelect = document.getElementById("emp_select");
+            const licDetailGroup = document.getElementById("lic_detail_group");
+
+            if (typeSelect.value === "FERIADO") {
+                empSelect.disabled = true;
+                licDetailGroup.style.display = "none";
+            } else if (typeSelect.value === "LICENCIA") {
+                empSelect.disabled = false;
+                licDetailGroup.style.display = "block";
+            } else {
+                empSelect.disabled = false;
+                licDetailGroup.style.display = "none";
+            }
+        }
+
+        function syncJson() {
+            document.getElementById("novedades_json").value = JSON.stringify(novedades);
+            document.getElementById("personal_json").value = JSON.stringify(personalList);
+        }
+
+        function renderCalendar() {
+            const mes = parseInt(document.getElementById("mes").value);
+            const anio = parseInt(document.getElementById("anio").value);
+            const grid = document.getElementById("calendar_grid");
+            grid.innerHTML = "";
+
+            const daysOfWeek = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+            daysOfWeek.forEach(d => {
+                const header = document.createElement("div");
+                header.className = "cal-header";
+                header.innerText = d;
+                grid.appendChild(header);
+            });
+
+            const firstDay = new Date(anio, mes - 1, 1).getDay();
+            const startingDay = (firstDay === 0) ? 6 : firstDay - 1;
+            const totalDays = new Date(anio, mes, 0).getDate();
+
+            for (let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement("div");
+                emptyCell.className = "cal-cell empty";
+                grid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateObj = new Date(anio, mes - 1, day);
+                const dayOfWeek = dateObj.getDay();
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+                const cell = document.createElement("div");
+                cell.className = "cal-cell" + (isWeekend ? " weekend" : "");
+                
+                const num = document.createElement("div");
+                num.className = "cal-day-num";
+                num.innerText = day;
+                cell.appendChild(num);
+
+                const dayNovedades = novedades.filter(n => n.date === day);
+                const isFeriadoDay = dayNovedades.some(n => n.type === "FERIADO");
+
+                if (isFeriadoDay) {
+                    cell.classList.add("feriado-cell");
+                }
+
+                dayNovedades.forEach(n => {
+                    const tag = document.createElement("div");
+                    tag.className = `cal-tag tag-${n.type.toLowerCase()}`;
+                    
+                    if (n.type === "FERIADO") {
+                        tag.innerText = "🎉 FERIADO";
+                    } else if (n.type === "LICENCIA") {
+                        const dText = n.detail ? `: ${n.detail}` : "";
+                        tag.innerText = `${n.emp} (LIC${dText})`;
+                    } else {
+                        tag.innerText = `${n.emp} (${n.type})`;
+                    }
+                    
+                    tag.title = "Haz clic en el día para quitar";
+                    cell.appendChild(tag);
+                });
+
+                if (!isWeekend) {
+                    cell.onclick = () => handleCellClick(day);
+                }
+
+                grid.appendChild(cell);
+            }
+
+            syncJson();
+        }
+
+        function handleCellClick(day) {
+            const type = document.getElementById("type_select").value;
+            const emp = type === "FERIADO" ? "TODOS" : document.getElementById("emp_select").value;
+            const licDetail = type === "LICENCIA" ? document.getElementById("lic_detail_input").value.trim() : "";
+
+            const index = novedades.findIndex(n => (type === "FERIADO" ? n.type === "FERIADO" : n.emp === emp) && n.date === day && n.type === type);
+            
+            if (index > -1) {
+                novedades.splice(index, 1);
+            } else {
+                novedades.push({ emp, date: day, type, detail: licDetail });
+            }
+
+            renderCalendar();
+        }
+
+        window.onload = () => {
+            renderStaffUI();
+            handleTypeChange();
+            renderCalendar();
+        };
+    </script>
+
+    <py-config>
+        packages = ["pandas", "openpyxl"]
+    </py-config>
+
+    <py-script src="./main.py"></py-script>
+
+</body>
+</html>
