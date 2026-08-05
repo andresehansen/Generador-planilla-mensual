@@ -87,7 +87,7 @@
                     <select id="type_select" onchange="handleTypeChange()">
                         <option value="HO_EXCEPCIONAL">🏡 Home Office Excepcional</option>
                         <option value="CONAE">🏛️ CONAE</option>
-                        <option value="LICENCIA">🌴 Licencia</option>
+                        <option value="LICENCIA">📄 Licencia</option>
                         <option value="MANANA">☀️ Turno Mañana Fijo</option>
                         <option value="TARDE">🌙 Turno Tarde Fijo</option>
                         <option value="FRANCO">🔴 Franco Solicitado</option>
@@ -99,7 +99,7 @@
             <!-- Campo dinámico para escribir el detalle de la licencia -->
             <div class="form-group" id="lic_detail_group" style="display: none;">
                 <label for="lic_detail_input">📝 Motivo/Detalle de Licencia (se escribirá manualmente en el Excel):</label>
-                <input type="text" id="lic_detail_input" value="Licencia no computable" placeholder="Ej: Licencia no computable, Examen, Médica">
+                <input type="text" id="lic_detail_input" value="Licencia no computable" placeholder="Ej: Licencia no computable, Examen, Médica, Atención Familiar">
             </div>
 
             <p class="instruction-text">👇 Haz clic sobre los días del calendario para asignar o quitar la novedad/feriado/HO seleccionado:</p>
@@ -172,7 +172,6 @@
         }
 
         function renderStaffUI() {
-            // Renderizar Chips de Personal con selector directo de Grupo HO
             const container = document.getElementById("staff_tags_list");
             container.innerHTML = "";
             personalList.forEach(p => {
@@ -191,7 +190,6 @@
                 container.appendChild(tag);
             });
 
-            // Select de Empleados
             const select = document.getElementById("emp_select");
             const currentVal = select.value;
             select.innerHTML = "";
@@ -205,7 +203,6 @@
                 select.value = currentVal;
             }
 
-            // Checkboxes de ALFA
             const alfaGrid = document.getElementById("alfa_checkboxes_grid");
             alfaGrid.innerHTML = "";
             personalList.forEach(p => {
