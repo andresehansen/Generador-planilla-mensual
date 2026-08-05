@@ -323,7 +323,6 @@ input:focus, select:focus {
 }
 
 .btn-primary {
-    width: 100%;
     background-color: #2b6cb0;
     color: #ffffff;
     font-size: 1rem;
@@ -341,6 +340,22 @@ input:focus, select:focus {
 
 .btn-primary:active {
     transform: scale(0.99);
+}
+
+.btn-reset {
+    background-color: #e53e3e;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-reset:hover {
+    background-color: #c53030;
 }
 
 .status-box {

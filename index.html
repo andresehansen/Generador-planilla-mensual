@@ -17,11 +17,11 @@
         </header>
 
         <main class="card">
-            <!-- Selección de Mes y Año -->
+            <!-- Selección de Mes y Año con Auto-Guardado -->
             <div class="form-row">
                 <div class="form-group">
                     <label for="mes">Mes de Planificación:</label>
-                    <select id="mes" onchange="renderCalendar()">
+                    <select id="mes" onchange="onDateChange()">
                         <option value="1">Enero</option>
                         <option value="2">Febrero</option>
                         <option value="3">Marzo</option>
@@ -39,7 +39,7 @@
 
                 <div class="form-group">
                     <label for="anio">Año:</label>
-                    <input type="number" id="anio" value="2026" min="2024" max="2030" onchange="renderCalendar()">
+                    <input type="number" id="anio" value="2026" min="2024" max="2030" onchange="onDateChange()">
                 </div>
             </div>
 
@@ -113,12 +113,17 @@
                 <div class="checkbox-grid" id="alfa_checkboxes_grid"></div>
             </div>
 
+            <!-- Botones de Acción -->
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="btn-generar" class="btn-primary" style="flex: 3;">⚡ Validar Reglas y Generar Planilla Excel (.xlsx)</button>
+                <button type="button" onclick="resetToDefaults()" class="btn-reset" style="flex: 1;" title="Reiniciar datos guardados">🔄 Restablecer Datos</button>
+            </div>
+
+            <div id="estado" class="status-box">Listo para procesar (Tus cambios se guardan automáticamente en tu navegador).</div>
+
             <!-- Campos ocultos para pasar datos JSON a Python -->
             <input type="hidden" id="novedades_json" value="[]">
             <input type="hidden" id="personal_json" value="[]">
-
-            <button id="btn-generar" class="btn-primary">⚡ Validar Reglas y Generar Planilla Excel (.xlsx)</button>
-            <div id="estado" class="status-box">Listo para procesar...</div>
         </main>
 
         <footer class="footer">
@@ -126,10 +131,12 @@
         </footer>
     </div>
 
-    <!-- Script de Gestión de Personal y Calendario Interactivo -->
+    <!-- Script de Gestión de Personal, Persistencia Local (localStorage) y Calendario Interactivo -->
     <script>
-        // Lista Maestra de Personal Configurable (con grupo HO configurable)
-        let personalList = [
+        const STORAGE_KEY = "organizador_servicios_state_v1";
+
+        // Valores por defecto
+        const defaultPersonalList = [
             { name: "Aranda", group: "DUOS", ho: "AHO" },
             { name: "Alegre", group: "DUOS", ho: "AHO" },
             { name: "Nahuel", group: "GIS", ho: "AHO" },
@@ -146,10 +153,9 @@
             { name: "Tamara", group: "DUOS", ho: "NINGUNO" }
         ];
 
-        let alfaSelected = ["Gonzalote", "Tamara"];
+        const defaultAlfaSelected = ["Gonzalote", "Tamara"];
 
-        // Arreglo global de novedades
-        let novedades = [
+        const defaultNovedades = [
             { emp: "TODOS", date: 17, type: "FERIADO" },
             { emp: "Coronel", date: 10, type: "CONAE" },
             { emp: "Coronel", date: 24, type: "CONAE" },
@@ -162,11 +168,59 @@
             { emp: "Nahuel", date: 12, type: "FRANCO" }
         ];
 
+        let personalList = [...defaultPersonalList];
+        let alfaSelected = [...defaultAlfaSelected];
+        let novedades = [...defaultNovedades];
+
+        function saveStateToLocalStorage() {
+            const state = {
+                mes: document.getElementById("mes").value,
+                anio: document.getElementById("anio").value,
+                personalList,
+                alfaSelected,
+                novedades
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            syncJson();
+        }
+
+        function loadStateFromLocalStorage() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const state = JSON.parse(raw);
+                    if (state.mes) document.getElementById("mes").value = state.mes;
+                    if (state.anio) document.getElementById("anio").value = state.anio;
+                    if (state.personalList) personalList = state.personalList;
+                    if (state.alfaSelected) alfaSelected = state.alfaSelected;
+                    if (state.novedades) novedades = state.novedades;
+                } catch (e) {
+                    console.error("Error al cargar estado:", e);
+                }
+            }
+        }
+
+        function resetToDefaults() {
+            if (confirm("¿Estás seguro de restablecer todos los datos a la configuración inicial?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                personalList = JSON.parse(JSON.stringify(defaultPersonalList));
+                alfaSelected = JSON.parse(JSON.stringify(defaultAlfaSelected));
+                novedades = JSON.parse(JSON.stringify(defaultNovedades));
+                renderStaffUI();
+                renderCalendar();
+            }
+        }
+
+        function onDateChange() {
+            saveStateToLocalStorage();
+            renderCalendar();
+        }
+
         function updateStaffHoGroup(empName, newHoGroup) {
             const p = personalList.find(item => item.name === empName);
             if (p) {
                 p.ho = newHoGroup;
-                syncJson();
+                saveStateToLocalStorage();
                 renderCalendar();
             }
         }
@@ -222,7 +276,7 @@
             } else {
                 alfaSelected.push(empName);
             }
-            syncJson();
+            saveStateToLocalStorage();
         }
 
         function addStaffMember() {
@@ -239,6 +293,7 @@
 
             personalList.push({ name, group, ho });
             input.value = "";
+            saveStateToLocalStorage();
             renderStaffUI();
             renderCalendar();
         }
@@ -248,6 +303,7 @@
                 personalList = personalList.filter(p => p.name !== name);
                 alfaSelected = alfaSelected.filter(e => e !== name);
                 novedades = novedades.filter(n => n.emp !== name);
+                saveStateToLocalStorage();
                 renderStaffUI();
                 renderCalendar();
             }
@@ -345,7 +401,7 @@
                 grid.appendChild(cell);
             }
 
-            syncJson();
+            saveStateToLocalStorage();
         }
 
         function handleCellClick(day) {
@@ -365,6 +421,7 @@
         }
 
         window.onload = () => {
+            loadStateFromLocalStorage();
             renderStaffUI();
             handleTypeChange();
             renderCalendar();
