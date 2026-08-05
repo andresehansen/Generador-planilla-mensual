@@ -94,6 +94,15 @@ label {
     gap: 6px;
 }
 
+.chip-ho-select {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e0;
+    background: #ffffff;
+    cursor: pointer;
+}
+
 .staff-chip .remove-btn {
     color: #e53e3e;
     font-weight: bold;
@@ -234,6 +243,10 @@ input:focus, select:focus {
 
 .tag-feriado {
     background-color: #d32f2f;
+}
+
+.tag-ho_excepcional {
+    background-color: #00838f;
 }
 
 .tag-conae {

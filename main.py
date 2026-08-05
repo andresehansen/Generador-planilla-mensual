@@ -86,7 +86,6 @@ def parse_personal_dinamico(personal_json_str):
         except Exception as e:
             print(f"Error parseando personal: {e}")
 
-    # Fallbacks si no se envió lista
     if not grupo_gis and not duos_trios and not resto:
         grupo_gis = {"Ledesma", "Itzi", "Fuentes", "Romero", "Coronel", "Nahuel", "Herrera"}
         duos_trios = {"Aranda", "Navarro", "Neri", "Tamara", "Alegre"}
@@ -106,10 +105,11 @@ def parse_novedades_json(json_str, anio, mes):
     francos_dict = {}
     mananas_dict = {}
     tardes_dict = {}
+    ho_excepcional_dict = {}
     feriados_manuales = []
 
     if not json_str.strip():
-        return conae_dict, licencias_dict, francos_dict, mananas_dict, tardes_dict, feriados_manuales
+        return conae_dict, licencias_dict, francos_dict, mananas_dict, tardes_dict, ho_excepcional_dict, feriados_manuales
 
     try:
         items = json.loads(json_str)
@@ -124,6 +124,8 @@ def parse_novedades_json(json_str, anio, mes):
 
             if ntype == "FERIADO":
                 feriados_manuales.append(date)
+            elif ntype == "HO_EXCEPCIONAL" and emp:
+                ho_excepcional_dict.setdefault(emp, []).append(date)
             elif ntype == "CONAE" and emp:
                 conae_dict.setdefault(emp, []).append(date)
             elif ntype == "LICENCIA" and emp:
@@ -140,12 +142,12 @@ def parse_novedades_json(json_str, anio, mes):
     except Exception as e:
         print(f"Error parseando novedades JSON: {e}")
 
-    return conae_dict, licencias_dict, francos_dict, mananas_dict, tardes_dict, feriados_manuales
+    return conae_dict, licencias_dict, francos_dict, mananas_dict, tardes_dict, ho_excepcional_dict, feriados_manuales
 
 # -------------------------------------------------------------------
 # MOTOR DE RESOLUCIÓN DE PLANILLA (SOLVER DINÁMICO)
 # -------------------------------------------------------------------
-def resolver_planilla(anio, mes, feriados_extra, conae_dict, licencias_dict, francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, bloqueados_alfa, personal_info):
+def resolver_planilla(anio, mes, feriados_extra, conae_dict, licencias_dict, francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, ho_excepcional_dict, bloqueados_alfa, personal_info):
     grupo_gis, duos_trios, resto, personal_total, grupo_aho, grupo_bho = personal_info
 
     bloqueados_tarde = {"Herrera", "Itzi"}
@@ -193,7 +195,7 @@ def resolver_planilla(anio, mes, feriados_extra, conae_dict, licencias_dict, fra
             if schedule[date]["feriado"]:
                 continue
 
-            # Home Office
+            # Home Office de grupo rotativo
             if day_name == "Lunes":
                 if not is_s1_s3:
                     schedule[date]["ho"].extend(grupo_aho)
@@ -208,6 +210,11 @@ def resolver_planilla(anio, mes, feriados_extra, conae_dict, licencias_dict, fra
             # HO Fijo Aranda los Martes
             if day_name == "Martes" and "Aranda" in personal_total and "Aranda" not in schedule[date]["ho"]:
                 schedule[date]["ho"].append("Aranda")
+
+            # Home Office Excepcional (entre semana fuera de grupos)
+            for emp, h_days in ho_excepcional_dict.items():
+                if date in h_days and emp not in schedule[date]["ho"]:
+                    schedule[date]["ho"].append(emp)
 
             # Asignaciones a CONAE
             for emp, c_days in conae_dict.items():
@@ -424,8 +431,15 @@ def generar_excel_formateado(anio, mes, weeks_data, schedule):
                 if day_name == "Lunes": ho_group = "AHO"
                 if day_name == "Viernes": ho_group = "BHO"
             
-            if ho_group:
-                manana_text += f"\n\n{ho_group}"
+            # Si hay Home Office dinámicos adicionales hoy, agregarlos al texto HO
+            ho_total = list(schedule[date]["ho"])
+            if ho_group and ho_group not in ho_total:
+                ho_total_str = f"{ho_group} (" + ", ".join(ho_total) + ")" if ho_total else ho_group
+            else:
+                ho_total_str = ", ".join(ho_total)
+
+            if ho_total_str:
+                manana_text += f"\n\n{ho_total_str}"
                 
             c1 = ws.cell(row=row_idx, column=col, value=manana_text)
             apply_border(c1)
@@ -468,13 +482,11 @@ async def ejecutar_generacion(event):
         box_estado.innerText = "🔍 Consultando feriados de Argentina en vivo..."
         feriados_api = await consultar_feriados(anio, mes)
 
-        # Parsear Personal Dinámico
         personal_json_str = document.querySelector("#personal_json").value
         personal_info = parse_personal_dinamico(personal_json_str)
 
-        # Parsear Novedades JSON
         novedades_json_str = document.querySelector("#novedades_json").value
-        conae_dict, licencias_dict, francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, feriados_manuales = parse_novedades_json(novedades_json_str, anio, mes)
+        conae_dict, licencias_dict, francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, ho_excepcional_dict, feriados_manuales = parse_novedades_json(novedades_json_str, anio, mes)
 
         feriados_totales = list(set(feriados_api + feriados_manuales))
 
@@ -485,7 +497,7 @@ async def ejecutar_generacion(event):
 
         weeks_data, schedule = resolver_planilla(
             anio, mes, feriados_totales, conae_dict, licencias_dict,
-            francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, bloqueados_alfa,
+            francos_solicitados_dict, mananas_solicitadas_dict, tardes_solicitadas_dict, ho_excepcional_dict, bloqueados_alfa,
             personal_info
         )
         wb = generar_excel_formateado(anio, mes, weeks_data, schedule)

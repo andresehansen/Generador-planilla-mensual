@@ -43,8 +43,8 @@
                 </div>
             </div>
 
-            <!-- Sección de Gestión de Personal (ABM) -->
-            <div class="section-title">👥 Gestión de Personal (Agregar y Eliminar Integrantes)</div>
+            <!-- Sección de Gestión de Personal y Grupos HO -->
+            <div class="section-title">👥 Gestión de Personal y Grupos de Home Office (AHO / BHO)</div>
 
             <div class="staff-management-box">
                 <div class="form-row">
@@ -73,7 +73,7 @@
                 <div class="staff-tags-container" id="staff_tags_list"></div>
             </div>
 
-            <div class="section-title">📅 Carga Visual de Novedades y Feriados en Calendario</div>
+            <div class="section-title">📅 Carga Visual de Novedades, Feriados y HO Excepcional</div>
 
             <!-- Panel de Selección de Novedad -->
             <div class="picker-panel">
@@ -83,8 +83,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="type_select">2. Tipo de Novedad o Feriado:</label>
+                    <label for="type_select">2. Tipo de Novedad, HO Excepcional o Feriado:</label>
                     <select id="type_select" onchange="handleTypeChange()">
+                        <option value="HO_EXCEPCIONAL">🏡 Home Office Excepcional</option>
                         <option value="CONAE">🏛️ CONAE</option>
                         <option value="LICENCIA">🌴 Licencia</option>
                         <option value="MANANA">☀️ Turno Mañana Fijo</option>
@@ -101,12 +102,12 @@
                 <input type="text" id="lic_detail_input" value="Licencia no computable" placeholder="Ej: Licencia no computable, Examen, Médica">
             </div>
 
-            <p class="instruction-text">👇 Haz clic sobre los días del calendario para asignar o quitar la novedad/feriado seleccionado:</p>
+            <p class="instruction-text">👇 Haz clic sobre los días del calendario para asignar o quitar la novedad/feriado/HO seleccionado:</p>
 
             <!-- Grid de Calendario Interactivo -->
             <div id="calendar_grid" class="calendar-grid"></div>
 
-            <!-- Personal que hace Alfa este mes (Todos los integrantes) -->
+            <!-- Personal que hace Alfa este mes -->
             <div class="form-group margin-top-20">
                 <label>🚘 Personal que hace ALFA este mes (Excluidos de monitores 07:00):</label>
                 <div class="checkbox-grid" id="alfa_checkboxes_grid"></div>
@@ -127,7 +128,7 @@
 
     <!-- Script de Gestión de Personal y Calendario Interactivo -->
     <script>
-        // Lista Maestra de Personal Configurable
+        // Lista Maestra de Personal Configurable (con grupo HO configurable)
         let personalList = [
             { name: "Aranda", group: "DUOS", ho: "AHO" },
             { name: "Alegre", group: "DUOS", ho: "AHO" },
@@ -145,7 +146,6 @@
             { name: "Tamara", group: "DUOS", ho: "NINGUNO" }
         ];
 
-        // Lista de Alfa seleccionados por defecto (Gonzalote y Tamara)
         let alfaSelected = ["Gonzalote", "Tamara"];
 
         // Arreglo global de novedades
@@ -162,18 +162,36 @@
             { emp: "Nahuel", date: 12, type: "FRANCO" }
         ];
 
+        function updateStaffHoGroup(empName, newHoGroup) {
+            const p = personalList.find(item => item.name === empName);
+            if (p) {
+                p.ho = newHoGroup;
+                syncJson();
+                renderCalendar();
+            }
+        }
+
         function renderStaffUI() {
-            // 1. Renderizar Tags de Personal
+            // Renderizar Chips de Personal con selector directo de Grupo HO
             const container = document.getElementById("staff_tags_list");
             container.innerHTML = "";
             personalList.forEach(p => {
                 const tag = document.createElement("span");
                 tag.className = "staff-chip";
-                tag.innerHTML = `<strong>${p.name}</strong> <small>(${p.group})</small> <span class="remove-btn" onclick="removeStaffMember('${p.name}')">&times;</span>`;
+                
+                const hoSelect = `
+                    <select class="chip-ho-select" onchange="updateStaffHoGroup('${p.name}', this.value)">
+                        <option value="NINGUNO" ${p.ho === 'NINGUNO' ? 'selected' : ''}>Sin HO</option>
+                        <option value="AHO" ${p.ho === 'AHO' ? 'selected' : ''}>AHO</option>
+                        <option value="BHO" ${p.ho === 'BHO' ? 'selected' : ''}>BHO</option>
+                    </select>
+                `;
+
+                tag.innerHTML = `<strong>${p.name}</strong> <small>(${p.group})</small> ${hoSelect} <span class="remove-btn" onclick="removeStaffMember('${p.name}')">&times;</span>`;
                 container.appendChild(tag);
             });
 
-            // 2. Renderizar Select de Empleados
+            // Select de Empleados
             const select = document.getElementById("emp_select");
             const currentVal = select.value;
             select.innerHTML = "";
@@ -187,7 +205,7 @@
                 select.value = currentVal;
             }
 
-            // 3. Renderizar Checkboxes de ALFA para TODOS los empleados
+            // Checkboxes de ALFA
             const alfaGrid = document.getElementById("alfa_checkboxes_grid");
             alfaGrid.innerHTML = "";
             personalList.forEach(p => {
@@ -310,6 +328,8 @@
                     
                     if (n.type === "FERIADO") {
                         tag.innerText = "🎉 FERIADO";
+                    } else if (n.type === "HO_EXCEPCIONAL") {
+                        tag.innerText = `${n.emp} (HO Excep)`;
                     } else if (n.type === "LICENCIA") {
                         const dText = n.detail ? `: ${n.detail}` : "";
                         tag.innerText = `${n.emp} (LIC${dText})`;
